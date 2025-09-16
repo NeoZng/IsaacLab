@@ -227,6 +227,7 @@ class TerrainGenerator:
             # add to sub-terrains
             self._add_sub_terrain(mesh, origin, sub_row, sub_col, sub_terrains_cfgs[sub_index])
 
+    # TODO: add terrain type for each col and row, 2d array for access
     def _generate_curriculum_terrains(self):
         """Add terrains based on the difficulty parameter."""
         # normalize the proportions of the sub-terrains
