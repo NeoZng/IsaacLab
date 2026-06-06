@@ -134,7 +134,7 @@ class TerminationManager(ManagerBase):
                 all environments are considered.
 
         Returns:
-            Dictionary of episodic sum of individual reward terms.
+            Dictionary of episodic sum of individual termination terms.
         """
         # resolve environment ids
         if env_ids is None:
@@ -145,7 +145,7 @@ class TerminationManager(ManagerBase):
         for i, key in enumerate(self._term_names):
             # store information
             extras["Episode_Termination/" + key] = last_episode_done_stats[i].item()
-        # reset all the reward terms
+        # reset all the termination terms
         for term_cfg in self._class_term_cfgs:
             term_cfg.func.reset(env_ids=env_ids)
         # return logged information
