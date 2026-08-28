@@ -68,6 +68,47 @@ def create_mock_asset(
     )
 
 
+@pytest.mark.parametrize("device", test_devices())
+def test_requires_body_frame_composition_tracking(device: str):
+    """Track the conservative fast-path eligibility across writes, merges, and resets."""
+    asset = create_mock_asset(2, 1, device)
+    forces = torch.ones(2, 1, 3, device=device)
+    torques = torch.ones(2, 1, 3, device=device)
+    positions = torch.ones(2, 1, 3, device=device)
+
+    composer = WrenchComposer(asset)
+    composer.add_forces_and_torques_index(forces=forces, torques=torques, is_global=True)
+    assert not composer._requires_body_frame_composition
+
+    # A world-frame torque does not use positions, even if an unused positions argument is present.
+    torque_only = WrenchComposer(asset)
+    torque_only.add_forces_and_torques_index(torques=torques, positions=positions, is_global=True)
+    assert not torque_only._requires_body_frame_composition
+
+    mask_global = WrenchComposer(asset)
+    mask_global.set_forces_and_torques_mask(forces=forces, torques=torques, is_global=True)
+    assert not mask_global._requires_body_frame_composition
+
+    positioned = WrenchComposer(asset)
+    positioned.add_forces_and_torques_index(forces=forces, positions=positions, is_global=True)
+    assert positioned._requires_body_frame_composition
+
+    local = WrenchComposer(asset)
+    local.add_forces_and_torques_index(forces=forces, is_global=False)
+    assert local._requires_body_frame_composition
+
+    composer.add_raw_buffers_from(local)
+    assert composer._requires_body_frame_composition
+
+    # A partial reset cannot prove that all body-frame contributions were removed, so it stays conservative.
+    composer.reset(env_ids=[0])
+    assert composer._requires_body_frame_composition
+    composer.reset(env_mask=wp.array([True, False], dtype=wp.bool, device=device))
+    assert composer._requires_body_frame_composition
+    composer.reset()
+    assert not composer._requires_body_frame_composition
+
+
 # --- Helper functions for quaternion math ---
 
 

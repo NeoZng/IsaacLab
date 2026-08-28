@@ -66,6 +66,9 @@ class WrenchComposer:
         self._asset = asset
         self._active = False
         self._dirty = False
+        # Tracks whether any contribution needs body pose data before it can be applied. Backends that accept
+        # world-frame wrenches can bypass that work when this is false. Partial resets conservatively preserve true.
+        self._requires_body_frame_composition = False
         if hasattr(self._asset.data, "body_com_pos_w"):
             self._get_com_pos_fn = lambda a=self._asset: a.data.body_com_pos_w.warp
         else:
@@ -265,6 +268,7 @@ class WrenchComposer:
 
         self._active = True
         self._dirty = True
+        self._requires_body_frame_composition |= not is_global or (forces is not None and positions is not None)
 
         wp.launch(
             add_forces_to_dual_buffers_index_kernel(env_ids, body_ids),
@@ -328,6 +332,7 @@ class WrenchComposer:
 
         self._active = True
         self._dirty = True
+        self._requires_body_frame_composition |= not is_global or (forces is not None and positions is not None)
 
         wp.launch(
             set_forces_to_dual_buffers_index_kernel(env_ids, body_ids),
@@ -388,6 +393,7 @@ class WrenchComposer:
 
         self._active = True
         self._dirty = True
+        self._requires_body_frame_composition |= not is_global or (forces is not None and positions is not None)
 
         wp.launch(
             add_forces_to_dual_buffers_mask,
@@ -453,6 +459,7 @@ class WrenchComposer:
 
         self._active = True
         self._dirty = True
+        self._requires_body_frame_composition |= not is_global or (forces is not None and positions is not None)
 
         wp.launch(
             set_forces_to_dual_buffers_mask,
@@ -493,6 +500,7 @@ class WrenchComposer:
 
         self._active = True
         self._dirty = True
+        self._requires_body_frame_composition |= other._requires_body_frame_composition
 
         wp.launch(
             add_raw_wrench_buffers,
@@ -571,6 +579,7 @@ class WrenchComposer:
             self._out_torque_b.zero_()
             self._active = False
             self._dirty = False
+            self._requires_body_frame_composition = False
         elif env_mask is not None:
             wp.launch(
                 reset_wrench_composer_mask,
